@@ -1,8 +1,102 @@
-```css
-body { font-family: sans-serif; }
-.hidden { display: none; }
-#players, #hand { display: flex; gap: 5px; }
-.card { width: 60px; height: 90px; background-size: cover; cursor: pointer; }
-#timer { font-size: 2rem; }
-#chatLog { height: 100px; overflow-y: scroll; border: 1px solid #ccc; }
-```
+body {
+  font-family: sans-serif;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.hidden {
+  display: none;
+}
+
+#auth, #lobby {
+  margin-top: 50px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#auth input, #lobby input, #lobby select, #auth button, #lobby button {
+  padding: 8px;
+  font-size: 1rem;
+}
+
+#game {
+  width: 100%;
+  max-width: 600px;
+  padding: 20px;
+}
+
+#profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+#chat {
+  border: 1px solid #ccc;
+  padding: 10px;
+  margin-bottom: 10px;
+  width: 100%;
+}
+
+#chatLog {
+  height: 100px;
+  overflow-y: auto;
+  margin-bottom: 5px;
+}
+
+#controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+#timer {
+  font-size: 2rem;
+  margin-bottom: 10px;
+}
+
+#pile {
+  width: 60px;
+  height: 90px;
+  border: 2px dashed #666;
+  margin-bottom: 10px;
+  background-size: cover;
+}
+
+#players {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+#hand {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.card {
+  width: 60px;
+  height: 90px;
+  background-size: cover;
+  cursor: pointer;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  transition: border 0.2s;
+}
+
+.card.selected {
+  border: 2px solid red;
+}
