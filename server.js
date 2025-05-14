@@ -1,4 +1,3 @@
-```js
 const express = require('express');
 const http = require('http');
 const path = require('path');
@@ -27,11 +26,15 @@ const io = require('socket.io')(server);
 
 // Middleware
 app.use(bodyParser.json());
-app.use(session({ secret: 'keyboard cat', resave: false, saveUninitialized: true }));
+app.use(session({
+  secret: 'keyboard cat',
+  resave: false,
+  saveUninitialized: true
+}));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // File upload for profile images
-gconst upload = multer({ dest: path.join(__dirname, 'public/uploads/') });
+const upload = multer({ dest: path.join(__dirname, 'public/uploads/') });
 
 // Authentication routes
 app.post('/api/register', async (req, res) => {
@@ -59,6 +62,7 @@ app.post('/api/login', async (req, res) => {
 
 app.post('/api/uploadProfile', upload.single('avatar'), async (req, res) => {
   if (!req.session.userId) return res.status(401).end();
+  await db.read();
   const user = db.data.users.find(u => u.id === req.session.userId);
   user.img = '/uploads/' + req.file.filename;
   await db.write();
@@ -119,7 +123,11 @@ class Game {
     const suits = ['hearts','diamonds','clubs','spades'];
     const ranks = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
     this.deck = [];
-    for (let s of suits) for (let r of ranks) this.deck.push({ suit: s, rank: r });
+    for (let s of suits) {
+      for (let r of ranks) {
+        this.deck.push({ suit: s, rank: r });
+      }
+    }
     this.deck.sort(() => Math.random() - 0.5);
   }
 }
@@ -128,7 +136,7 @@ const rooms = {};
 
 io.on('connection', socket => {
   let currentRoom;
-  let userId = socket.handshake.auth.userId;
+  const userId = socket.handshake.auth.userId;
 
   socket.on('joinRoom', ({ roomName }) => {
     currentRoom = roomName;
@@ -148,10 +156,12 @@ io.on('connection', socket => {
       game.resetDeck();
       game.pile = game.deck.pop();
       for (let pid of game.players) {
-        game.hands[pid] = game.deck.splice(0,5);
+        game.hands[pid] = game.deck.splice(0, 5);
       }
       io.to(currentRoom).emit('roundStart', {
-        hands: game.hands, pile: game.pile, pot: game.pot
+        hands: game.hands,
+        pile: game.pile,
+        pot: game.pot
       });
     }
   });
@@ -160,7 +170,7 @@ io.on('connection', socket => {
     const game = rooms[currentRoom];
     if (!Array.isArray(indices) || indices.length > 3) return;
     game.pot += indices.length;
-    let hand = game.hands[userId];
+    const hand = game.hands[userId];
     for (let i of indices) {
       game.deck.push(hand[i]);
       hand[i] = game.deck.pop();
@@ -171,26 +181,31 @@ io.on('connection', socket => {
 
   socket.on('playCard', ({ card }) => {
     const game = rooms[currentRoom];
-    let hand = game.hands[userId];
-    // validate card in hand & same suit & higher rank
-    const valid = hand.find(c => c.suit===card.suit&&c.rank===card.rank);
+    const hand = game.hands[userId];
+    const valid = hand.find(c => c.suit === card.suit && c.rank === card.rank);
     if (!valid) return;
-    // TODO: compare game.pile
-    hand.splice(hand.indexOf(valid),1);
+    hand.splice(hand.indexOf(valid), 1);
     game.pile = valid;
-    io.to(currentRoom).emit('cardPlayed',{ userId, card });
-    if (hand.length===0) {
+    io.to(currentRoom).emit('cardPlayed', { userId, card });
+    if (hand.length === 0) {
       // round end
-      let losers = game.players.filter(pid=>game.hands[pid].length>0);
-      losers.forEach(pid=>{
+      const losers = game.players.filter(pid => game.hands[pid].length > 0);
+      losers.forEach(pid => {
         const pts = game.hands[pid].length;
-        const user = db.data.users.find(u=>u.id===pid);
-        user.points += pts;
+        const user = db.data.users.find(u => u.id === pid);
+        if (user) user.points += pts;
       });
       // save history
-      db.data.history.push({ id: uuid(), gameId: game.id, winner: userId, pot: game.pot, time: Date.now(), paid:false });
+      db.data.history.push({
+        id: uuid(),
+        gameId: game.id,
+        winner: userId,
+        pot: game.pot,
+        time: Date.now(),
+        paid: false
+      });
       db.write();
-      io.to(currentRoom).emit('roundEnd',{ winner:userId, pot:game.pot });
+      io.to(currentRoom).emit('roundEnd', { winner: userId, pot: game.pot });
     }
   });
 
@@ -199,7 +214,7 @@ io.on('connection', socket => {
   });
 
   socket.on('chatMessage', msg => {
-    io.to(currentRoom).emit('chatMessage',{ userId, msg });
+    io.to(currentRoom).emit('chatMessage', { userId, msg });
   });
 
   socket.on('disconnect', () => {
@@ -207,6 +222,7 @@ io.on('connection', socket => {
   });
 });
 
-const PORT = process.env.PORT||3000;
-server.listen(PORT,()=>console.log(`Server up on ${PORT}`));
-```
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, function() {
+  console.log('Server up on ' + PORT);
+});
