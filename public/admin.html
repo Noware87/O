@@ -1,8 +1,18 @@
-```html
 <!DOCTYPE html>
-<html><body>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Adminpanel – NIMA OMME SPECIAL</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
   <h1>Adminpanel</h1>
-  <div id="history"></div>
-  <script src="admin.js"></script>
-</body></html>
-```
+  <div>
+    <h2>Spelhistorik</h2>
+    <pre id="history">Laddar...</pre>
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script defer src="admin.js"></script>
+</body>
+</html>
