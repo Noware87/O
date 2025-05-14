@@ -105,29 +105,23 @@ app.post('/api/admin/markPaid', adminAuth, async (req, res) => {
   res.json({ success: true });
 });
 
-// Game logic
+// Game class and Socket.IO logic
 class Game {
-  constructor(name) {
+  constructor(name, maxPlayers) {
     this.id = name;
+    this.maxPlayers = maxPlayers;
     this.players = [];
     this.deck = [];
     this.pile = null;
     this.hands = {};
     this.ready = new Set();
-    this.turnIndex = 0;
     this.pot = 0;
-    this.eliminated = new Set();
-    this.omme = false;
   }
   resetDeck() {
     const suits = ['hearts','diamonds','clubs','spades'];
     const ranks = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
     this.deck = [];
-    for (let s of suits) {
-      for (let r of ranks) {
-        this.deck.push({ suit: s, rank: r });
-      }
-    }
+    suits.forEach(suit => ranks.forEach(rank => this.deck.push({ suit, rank })));
     this.deck.sort(() => Math.random() - 0.5);
   }
 }
@@ -135,52 +129,45 @@ class Game {
 const rooms = {};
 
 io.on('connection', socket => {
-  let currentRoom;
+  let game, currentRoom;
   const userId = socket.handshake.auth.userId;
 
-  socket.on('joinRoom', ({ roomName }) => {
+  socket.on('joinRoom', ({ roomName, maxPlayers }) => {
     currentRoom = roomName;
     socket.join(roomName);
-    if (!rooms[roomName]) rooms[roomName] = new Game(roomName);
-    const game = rooms[roomName];
-    if (!game.players.includes(userId)) game.players.push(userId);
+    if (!rooms[roomName]) rooms[roomName] = new Game(roomName, maxPlayers);
+    game = rooms[roomName];
+    if (game.players.length < game.maxPlayers && !game.players.includes(userId)) {
+      game.players.push(userId);
+    }
     io.to(roomName).emit('roomUpdate', game);
   });
 
   socket.on('ready', () => {
-    const game = rooms[currentRoom];
     game.ready.add(userId);
     io.to(currentRoom).emit('playerReady', [...game.ready]);
     if (game.ready.size === game.players.length) {
-      // start round
       game.resetDeck();
       game.pile = game.deck.pop();
-      for (let pid of game.players) {
+      game.players.forEach(pid => {
         game.hands[pid] = game.deck.splice(0, 5);
-      }
-      io.to(currentRoom).emit('roundStart', {
-        hands: game.hands,
-        pile: game.pile,
-        pot: game.pot
       });
+      io.to(currentRoom).emit('roundStart', { hands: game.hands, pile: game.pile });
     }
   });
 
   socket.on('exchange', ({ indices }) => {
-    const game = rooms[currentRoom];
-    if (!Array.isArray(indices) || indices.length > 3) return;
     game.pot += indices.length;
     const hand = game.hands[userId];
-    for (let i of indices) {
+    indices.forEach(i => {
       game.deck.push(hand[i]);
       hand[i] = game.deck.pop();
-    }
+    });
     io.to(socket.id).emit('handUpdate', hand);
     io.to(currentRoom).emit('potUpdate', game.pot);
   });
 
   socket.on('playCard', ({ card }) => {
-    const game = rooms[currentRoom];
     const hand = game.hands[userId];
     const valid = hand.find(c => c.suit === card.suit && c.rank === card.rank);
     if (!valid) return;
@@ -188,22 +175,13 @@ io.on('connection', socket => {
     game.pile = valid;
     io.to(currentRoom).emit('cardPlayed', { userId, card });
     if (hand.length === 0) {
-      // round end
       const losers = game.players.filter(pid => game.hands[pid].length > 0);
       losers.forEach(pid => {
         const pts = game.hands[pid].length;
         const user = db.data.users.find(u => u.id === pid);
         if (user) user.points += pts;
       });
-      // save history
-      db.data.history.push({
-        id: uuid(),
-        gameId: game.id,
-        winner: userId,
-        pot: game.pot,
-        time: Date.now(),
-        paid: false
-      });
+      db.data.history.push({ id: uuid(), gameId: game.id, winner: userId, pot: game.pot, time: Date.now(), paid: false });
       db.write();
       io.to(currentRoom).emit('roundEnd', { winner: userId, pot: game.pot });
     }
