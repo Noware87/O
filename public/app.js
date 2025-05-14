@@ -1,72 +1,45 @@
-```js
-(async()=>{
-  const socket = io({ auth:{ userId:null }});
-  let me;
-
-  // Auth handlers
-  document.getElementById('btnRegister').onclick = async()=>{
-    const u=...
-  };
-  // ... implement AJAX register, login, then show lobby
-
-  // Lobby
-  document.getElementById('btnJoin').onclick=()=>{
-    const room=document.getElementById('roomName').value;
-    socket.auth.userId=me.id;
-    socket.emit('joinRoom',{roomName:room});
-    document.getElementById('game').classList.remove('hidden');
-  };
-
-  // Socket events: roomUpdate, roundStart, cardPlayed, playerPass, roundEnd, chatMessage, etc.
-  // UI updates: render players, hand, pile, chat.
-  // Controls: playCard, pass, exchange, ready
-  // Timer: setInterval 10s, show countdown
-  // Sound: soundCard.play(), navigator.vibrate(), etc.
-  // Music toggle and mic toggle
-})();
-```
 (async () => {
-  // Socket.io kopplas först efter inloggning
+  // --- Variabler ---
   let socket;
   let me = null;
   let currentRoom = null;
   let timerInterval = null;
   const TIMER_DURATION = 10; // sekunder
 
-  // DOM-element
-  const authDiv    = document.getElementById('auth');
-  const lobbyDiv   = document.getElementById('lobby');
-  const gameDiv    = document.getElementById('game');
-  const btnRegister = document.getElementById('btnRegister');
-  const btnLogin    = document.getElementById('btnLogin');
-  const usernameEl  = document.getElementById('username');
-  const passwordEl  = document.getElementById('password');
-  const emailEl     = document.getElementById('email');
-  const btnJoin     = document.getElementById('btnJoin');
-  const roomNameEl  = document.getElementById('roomName');
-  const playersDiv  = document.getElementById('players');
-  const pileDiv     = document.getElementById('pile');
-  const handDiv     = document.getElementById('hand');
-  const btnReady    = document.getElementById('btnReady');
-  const btnExchange = document.getElementById('btnExchange');
-  const timerEl     = document.getElementById('timer');
-  const chatLog     = document.getElementById('chatLog');
-  const chatMsgEl   = document.getElementById('chatMsg');
-  const btnSend     = document.getElementById('btnSend');
-  const avatarEl    = document.getElementById('avatar');
-  const userLabelEl = document.getElementById('userLabel');
-  const fileAvatar  = document.getElementById('fileAvatar');
-  const bgMusic     = document.getElementById('bgMusic');
+  // --- DOM-element ---
+  const authDiv      = document.getElementById('auth');
+  const lobbyDiv     = document.getElementById('lobby');
+  const gameDiv      = document.getElementById('game');
+  const btnRegister  = document.getElementById('btnRegister');
+  const btnLogin     = document.getElementById('btnLogin');
+  const usernameEl   = document.getElementById('username');
+  const passwordEl   = document.getElementById('password');
+  const emailEl      = document.getElementById('email');
+  const btnJoin      = document.getElementById('btnJoin');
+  const roomNameEl   = document.getElementById('roomName');
+  const playersDiv   = document.getElementById('players');
+  const pileDiv      = document.getElementById('pile');
+  const handDiv      = document.getElementById('hand');
+  const btnReady     = document.getElementById('btnReady');
+  const btnExchange  = document.getElementById('btnExchange');
+  const timerEl      = document.getElementById('timer');
+  const chatLog      = document.getElementById('chatLog');
+  const chatMsgEl    = document.getElementById('chatMsg');
+  const btnSend      = document.getElementById('btnSend');
+  const avatarEl     = document.getElementById('avatar');
+  const userLabelEl  = document.getElementById('userLabel');
+  const fileAvatar   = document.getElementById('fileAvatar');
+  const bgMusic      = document.getElementById('bgMusic');
   const btnMusicToggle = document.getElementById('btnMusicToggle');
   const btnMicToggle   = document.getElementById('btnMicToggle');
-  const soundCard   = document.getElementById('soundCard');
-  const soundPass   = document.getElementById('soundPass');
-  const soundWin    = document.getElementById('soundWin');
+  const soundCard    = document.getElementById('soundCard');
+  const soundPass    = document.getElementById('soundPass');
+  const soundWin     = document.getElementById('soundWin');
 
-  // Hjälpfunktioner
-  function show(div)   { div.classList.remove('hidden'); }
-  function hide(div)   { div.classList.add('hidden'); }
-  function vibrate()   { if (navigator.vibrate) navigator.vibrate(200); }
+  // --- Hjälpfunktioner ---
+  function show(el) { el.classList.remove('hidden'); }
+  function hide(el) { el.classList.add('hidden'); }
+  function vibrate() { navigator.vibrate && navigator.vibrate(200); }
   function resetTimer() {
     clearInterval(timerInterval);
     timerEl.textContent = '';
@@ -85,88 +58,96 @@
     }, 1000);
   }
   function formatCard(c) {
-    // Ex: { suit: 'hearts', rank: 'A' } ⇒ 'hearts_A'
     return `${c.suit}_${c.rank}`;
   }
 
-  // Render-funktioner
+  // --- Renderfunktioner ---
   function renderPlayers(players, readySet) {
     playersDiv.innerHTML = '';
     players.forEach(p => {
-      const div = document.createElement('div');
-      div.classList.add('player');
+      const d = document.createElement('div');
+      d.className = 'player';
       const img = document.createElement('img');
       img.src = p.img || 'cards/back.png';
       img.width = 40;
       const lbl = document.createElement('span');
       lbl.textContent = p.username + (readySet.has(p.id) ? ' ✅' : '');
-      div.append(img, lbl);
-      playersDiv.appendChild(div);
+      d.append(img, lbl);
+      playersDiv.appendChild(d);
     });
   }
-
   function renderPile(card) {
-    if (!card) return;
-    pileDiv.style.backgroundImage = `url('cards/${formatCard(card)}.png')`;
+    pileDiv.style.backgroundImage = card
+      ? `url('cards/${formatCard(card)}.png')`
+      : '';
   }
-
   function renderHand(hand) {
     handDiv.innerHTML = '';
-    hand.forEach((c, idx) => {
-      const cardEl = document.createElement('div');
-      cardEl.classList.add('card');
-      cardEl.style.backgroundImage = `url('cards/${formatCard(c)}.png')`;
-      cardEl.onclick = () => {
-        socket.emit('playCard', { card: c });
-      };
-      handDiv.appendChild(cardEl);
+    hand.forEach(c => {
+      const el = document.createElement('div');
+      el.className = 'card';
+      el.style.backgroundImage = `url('cards/${formatCard(c)}.png')`;
+      el.onclick = () => socket.emit('playCard', { card: c });
+      handDiv.appendChild(el);
     });
   }
-
-  function addChatMessage(user, msg) {
-    const line = document.createElement('div');
-    line.innerHTML = `<strong>${user.username}:</strong> ${msg}`;
-    chatLog.appendChild(line);
+  function addChat(user, msg) {
+    const ln = document.createElement('div');
+    ln.innerHTML = `<strong>${user}:</strong> ${msg}`;
+    chatLog.appendChild(ln);
     chatLog.scrollTop = chatLog.scrollHeight;
   }
 
-  // Autentisering
+  // --- Auth: Registrera ---
   btnRegister.onclick = async () => {
+    const payload = {
+      username: usernameEl.value,
+      password: passwordEl.value,
+      email:    emailEl.value
+    };
+    console.log('▶ Skickar register:', payload);
     const res = await fetch('/api/register', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({
-        username: usernameEl.value,
-        password: passwordEl.value,
-        email:    emailEl.value
-      })
+      body: JSON.stringify(payload)
     });
+    console.log('← status', res.status);
+    const data = await res.json().catch(() => ({}));
+    console.log('← body', data);
     if (res.ok) alert('Registrerad! Logga in nu.');
-    else alert('Fel vid registrering.');
+    else alert('Fel vid registrering: ' + (data.error || res.status));
   };
 
+  // --- Auth: Logga in ---
   btnLogin.onclick = async () => {
+    const payload = {
+      username: usernameEl.value,
+      password: passwordEl.value
+    };
+    console.log('▶ Skickar login:', payload);
     const res = await fetch('/api/login', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({
-        username: usernameEl.value,
-        password: passwordEl.value
-      })
+      body: JSON.stringify(payload)
     });
-    if (!res.ok) { alert('Inloggning misslyckades'); return; }
-    me = await res.json().then(r => r.user);
-    // Visa lobby
+    console.log('← status', res.status);
+    if (!res.ok) {
+      alert('Inloggning misslyckades');
+      return;
+    }
+    const body = await res.json();
+    me = body.user;
     hide(authDiv);
     show(lobbyDiv);
     userLabelEl.textContent = me.username;
     if (me.img) avatarEl.src = me.img;
-    // Initiera socket
+
+    // Initiera socket efter inloggning
     socket = io({ auth: { userId: me.id } });
     setupSocketHandlers();
   };
 
-  // Filuppladdning profilbild
+  // --- Ladda upp profilbild ---
   fileAvatar.onchange = async () => {
     const f = fileAvatar.files[0];
     const fd = new FormData();
@@ -178,101 +159,79 @@
     }
   };
 
-  // Anslutning till rum
+  // --- Gå med i rum ---
   btnJoin.onclick = () => {
     const room = roomNameEl.value.trim();
-    if (!room) return alert('Ange rum');
+    if (!room) return alert('Ange ett rumsnamn');
     currentRoom = room;
     hide(lobbyDiv);
     show(gameDiv);
     socket.emit('joinRoom', { roomName: room });
   };
 
-  // Socket-hanterare
+  // --- Socket.IO-hanterare ---
   function setupSocketHandlers() {
-    // När spelrum uppdateras
     socket.on('roomUpdate', game => {
       renderPlayers(game.players, new Set(game.ready || []));
     });
-
     socket.on('playerReady', readyList => {
+      // game-objekt finns i första event, spara globalt om du behöver
       renderPlayers(game.players, new Set(readyList));
     });
-
-    // När alla är redo – starta runda
-    socket.on('roundStart', ({ hands, pile, pot }) => {
+    socket.on('roundStart', ({ hands, pile }) => {
       renderHand(hands[me.id]);
       renderPile(pile);
-      // visa eventuell pott (valfritt: i UI)
       resetTimer();
       startTimer();
     });
-
-    socket.on('handUpdate', hand => {
-      renderHand(hand);
-    });
-
-    socket.on('potUpdate', pot => {
-      console.log('Pot:', pot);
-    });
-
+    socket.on('handUpdate', hand => renderHand(hand));
+    socket.on('potUpdate', pot => console.log('Pot:', pot));
     socket.on('cardPlayed', ({ userId, card }) => {
       renderPile(card);
-      soundCard.play();
-      vibrate();
-      resetTimer();
-      startTimer();
+      soundCard.play(); vibrate();
+      resetTimer(); startTimer();
     });
-
     socket.on('playerPass', userId => {
       soundPass.play();
-      // visa PASS-overlay (kan implementeras)
     });
-
     socket.on('roundEnd', ({ winner, pot }) => {
       if (winner === me.id) {
-        alert(`Grattis, du vann potten på ${pot} poäng!`);
-        soundWin.play();
-        vibrate();
+        alert('Grattis! Du vann potten på ' + pot);
+        soundWin.play(); vibrate();
       } else {
-        alert(`Spelaren ${winner} vann ronden.`);
+        alert('Spelare ' + winner + ' vann.');
       }
       resetTimer();
     });
-
-    socket.on('chatMessage', async ({ userId, msg }) => {
-      // Hitta användarnamn via game.players
-      // För enkelhet, visa bara ID
-      addChatMessage({ username: userId }, msg);
+    socket.on('chatMessage', ({ userId, msg }) => {
+      addChat(userId, msg);
     });
   }
 
-  // Knapphändelser i spelet
+  // --- Övriga kontroller ---
   btnReady.onclick = () => {
     socket.emit('ready');
     btnReady.disabled = true;
   };
-
   btnExchange.onclick = () => {
-    const s = prompt('Vilka kortindex (0–4) vill du byta? Skriv kommaseparerat, max 3.');
+    const s = prompt('Byt kortindex (0–4), kommaseparerat, max 3:');
     if (!s) return;
-    const indices = s.split(',').map(x => parseInt(x)).filter(n => !isNaN(n));
-    socket.emit('exchange', { indices });
+    const idx = s.split(',').map(x=>+x).filter(n=>!isNaN(n));
+    socket.emit('exchange', { indices: idx });
   };
-
   btnSend.onclick = () => {
-    const msg = chatMsgEl.value.trim();
-    if (!msg) return;
-    socket.emit('chatMessage', msg);
+    const m = chatMsgEl.value.trim();
+    if (!m) return;
+    socket.emit('chatMessage', m);
     chatMsgEl.value = '';
   };
-
-  // Musik och mikrofon
   btnMusicToggle.onclick = () => {
-    if (bgMusic.paused) bgMusic.play();
-    else bgMusic.pause();
+    bgMusic.paused ? bgMusic.play() : bgMusic.pause();
   };
   btnMicToggle.onclick = () => {
     bgMusic.pause();
   };
+
+  // Visa auth‐form direkt
+  show(authDiv);
 })();
