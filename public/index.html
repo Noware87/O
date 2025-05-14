@@ -1,0 +1,56 @@
+```html
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NIMA OMME SPECIAL</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Login/Register -->
+  <div id="auth">
+    <h2>Logga in / Registrera</h2>
+    <input id="username" placeholder="Användarnamn" />
+    <input id="password" type="password" placeholder="Lösenord" />
+    <input id="email" placeholder="E-post (registrera)" />
+    <button id="btnRegister">Registrera</button>
+    <button id="btnLogin">Logga in</button>
+  </div>
+
+  <!-- Game UI -->
+  <div id="lobby" class="hidden">
+    <input id="roomName" placeholder="Spelrum" />
+    <button id="btnJoin">Gå med</button>
+  </div>
+
+  <div id="game" class="hidden">
+    <div id="profile">
+      <img id="avatar" src="back.png" width="50" /><span id="userLabel"></span>
+      <input type="file" id="fileAvatar" />
+    </div>
+    <div id="chat">
+      <div id="chatLog"></div>
+      <input id="chatMsg" /><button id="btnSend">Skicka</button>
+    </div>
+    <div id="players"></div>
+    <div id="pile"></div>
+    <div id="hand"></div>
+    <div id="controls">
+      <button id="btnReady">Redo</button>
+      <button id="btnExchange">Byt kort</button>
+    </div>
+    <div id="timer"></div>
+    <audio id="soundCard" src="sounds/card.mp3"></audio>
+    <audio id="soundPass" src="sounds/pass.mp3"></audio>
+    <audio id="soundWin" src="sounds/win.mp3"></audio>
+    <audio id="bgMusic" src="sounds/music.mp3" loop autoplay></audio>
+    <button id="btnMusicToggle">Mute Musik</button>
+    <button id="btnMicToggle">Mikrofon</button>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
+```
