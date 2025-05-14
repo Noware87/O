@@ -1,0 +1,8 @@
+```css
+body { font-family: sans-serif; }
+.hidden { display: none; }
+#players, #hand { display: flex; gap: 5px; }
+.card { width: 60px; height: 90px; background-size: cover; cursor: pointer; }
+#timer { font-size: 2rem; }
+#chatLog { height: 100px; overflow-y: scroll; border: 1px solid #ccc; }
+```
